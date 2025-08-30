@@ -1,6 +1,6 @@
 // app/notes/action/create/page.tsx
 import NoteForm from "@/components/NoteForm/NoteForm";
-import css from "../../../../components/CreateNote/CreateNote.module.css";
+import css from "@/components/NoteForm/NoteForm.module.css";
 import type { Metadata } from "next";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://your-vercel-domain.vercel.app";
