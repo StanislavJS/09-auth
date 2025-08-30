@@ -7,6 +7,7 @@ import { User } from '@/types/user';
 import { useEffect, useState } from 'react';
 import { getMe, updateMe } from '@/lib/api/clientApi';
 import { useAuthStore } from '@/lib/store/authStore';
+import { AxiosError } from 'axios';
 
 const DEFAULT_AVATAR = '/default-avatar.png';
 
@@ -57,10 +58,12 @@ const EditProfilePage = () => {
       const updatedUser = await updateMe({ username: userData.username });
       setUser(updatedUser);
       router.push('/profile');
-    } catch (err: any) {
-      setError(
-        err?.response?.data?.error || 'Unable to save changes. Please try again.'
-      );
+    } catch (err: unknown) {
+      let errorMessage = 'Unable to save changes. Please try again.';
+      if (err instanceof AxiosError) {
+        errorMessage = err.response?.data?.error || errorMessage;
+      }
+      setError(errorMessage);
     } finally {
       setIsSaving(false);
     }
