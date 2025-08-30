@@ -43,34 +43,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function NotesFilterPage({ params }: Props) {
   const resolvedParams = await params;
   const tag = parseTag(resolvedParams.slug);
-  
+
   // 🔹 Проверка сессии (защита страницы)
   const session = await checkServerSession();
   if (!session) redirect('/sign-in');
 
   // 🔹 Получение начальных заметок через SSR
-  // Получение начальных заметок через SSR
-let initialNotes: NotesResponse;
-try {
-  const fetchResult = await fetchServerNotes({
-    page: 1,
-    perPage: 12,
-    search: '',
-    tag: tag === 'All' ? undefined : tag,
-  });
+  let initialNotes: NotesResponse;
+  try {
+    const fetchResult = await fetchServerNotes({
+      page: 1,
+      perPage: 12,
+      search: '',
+      tag: tag === 'All' ? undefined : tag,
+    });
 
-  // Преобразуем FetchNotesResponse в NotesResponse
-  initialNotes = {
-    notes: fetchResult.data ?? [],
-    totalPages: Math.ceil((fetchResult.total ?? 0) / 12) || 1,
-  };
-} catch {
-  initialNotes = {
-    notes: [],
-    totalPages: 1,
-  };
-}
-
+    // fetchResult уже возвращает NotesResponse
+    initialNotes = {
+      notes: fetchResult.notes,
+      totalPages: fetchResult.totalPages,
+    };
+  } catch {
+    initialNotes = {
+      notes: [],
+      totalPages: 1,
+    };
+  }
 
   // 🔹 TanStack Query prefetch
   const queryClient = new QueryClient();
