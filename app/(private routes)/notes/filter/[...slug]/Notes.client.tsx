@@ -9,7 +9,7 @@ import NoteList from '@/components/NoteList/NoteList';
 import SearchBox from '@/components/SearchBox/SearchBox';
 import Pagination from '@/components/Pagination/Pagination';
 import Link from 'next/link';
-import css from '../../../../../components/NotePage/NotePage.module.css';
+import css from '@/components/NotePage/NotePage.module.css';
 
 type NotesClientProps = {
   initialTag: 'All' | NoteTag;
@@ -37,7 +37,6 @@ export default function NotesClient({ initialTag }: NotesClientProps) {
         search: debouncedSearchTerm,
         tag: currentTag === 'All' ? undefined : currentTag,
       }),
-    keepPreviousData: true as const, // исправлено для TS
   });
 
   const notes = data?.data ?? [];
