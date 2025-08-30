@@ -10,7 +10,7 @@ type ProtectedNotesProps = {
   initialTag: 'All' | NoteTag;
 };
 
-// Экспортируем сам компонент по умолчанию, а не тип
+// Экспортируем сам компонент, а не тип
 export default function ProtectedNotes({ initialTag }: ProtectedNotesProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
