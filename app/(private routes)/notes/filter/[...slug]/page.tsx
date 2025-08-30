@@ -1,50 +1,84 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { checkSession } from '@/lib/api/clientApi';
+// app/(private routes)/notes/filter/[...slug]/page.tsx
+import { HydrationBoundary, dehydrate, QueryClient } from '@tanstack/react-query';
+import { fetchServerNotes, checkServerSession } from '@/lib/api/serverApi';
 import NotesClient from './Notes.client';
-import type { NoteTag } from '@/types/note';
+import type { NoteTag, NotesResponse } from '@/types/note';
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-type ProtectedNotesProps = {
-  initialTag: 'All' | NoteTag;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+type Props = {
+  params: Promise<{ slug?: string[] }>;
 };
 
-// Экспортируем сам компонент, а не тип
-export default function ProtectedNotes({ initialTag }: ProtectedNotesProps) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
+// 🔹 Хелпер для обработки тегов
+function parseTag(slug?: string[]): NoteTag | 'All' {
+  const raw = slug?.[0];
+  if (!raw || raw.toLowerCase() === 'all') return 'All';
+  return raw as NoteTag;
+}
 
-  useEffect(() => {
-    let isMounted = true;
+// ✅ SEO metadata
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const resolvedParams = await params;
+  const tag = parseTag(resolvedParams.slug);
 
-    const verifySession = async () => {
-      try {
-        const valid = await checkSession();
-        if (isMounted) {
-          if (!valid) {
-            router.push('/sign-in'); // редирект на страницу входа
-          } else {
-            setAuthenticated(true);
-          }
-        }
-      } catch {
-        router.push('/sign-in');
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
+  const title = `Notes — ${tag} | NoteHub`;
+  const description = `Browse your notes filtered by: ${tag}.`;
 
-    verifySession();
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}/notes/filter/${tag}`,
+      images: ['https://ac.goit.global/fullstack/react/notehub-og-meta.jpg'],
+    },
+  };
+}
 
-    return () => {
-      isMounted = false;
-    };
-  }, [router]);
+// ✅ Страница заметок с фильтром и защитой
+export default async function NotesFilterPage({ params }: Props) {
+  const resolvedParams = await params;
+  const tag = parseTag(resolvedParams.slug);
+  
+  // 🔹 Проверка сессии (защита страницы)
+  const session = await checkServerSession();
+  if (!session) redirect('/sign-in');
 
-  if (loading) return <div>Loading...</div>;
-  if (!authenticated) return null;
+  // 🔹 Получение начальных заметок через SSR
+  // Получение начальных заметок через SSR
+let initialNotes: NotesResponse;
+try {
+  const fetchResult = await fetchServerNotes({
+    page: 1,
+    perPage: 12,
+    search: '',
+    tag: tag === 'All' ? undefined : tag,
+  });
 
-  return <NotesClient initialTag={initialTag} />;
+  // Преобразуем FetchNotesResponse в NotesResponse
+  initialNotes = {
+    notes: fetchResult.data ?? [],
+    totalPages: Math.ceil((fetchResult.total ?? 0) / 12) || 1,
+  };
+} catch {
+  initialNotes = {
+    notes: [],
+    totalPages: 1,
+  };
+}
+
+
+  // 🔹 TanStack Query prefetch
+  const queryClient = new QueryClient();
+  queryClient.setQueryData(['notes', 1, '', tag], initialNotes);
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <NotesClient initialNotes={initialNotes} initialTag={tag} />
+    </HydrationBoundary>
+  );
 }

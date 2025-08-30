@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from 'use-debounce';
-import type { NoteTag } from '@/types/note';
-import { fetchNotes, FetchNotesResponse } from '@/lib/api/clientApi';
+import type { NoteTag, NotesResponse } from '@/types/note';
+import { fetchNotes } from '@/lib/api/clientApi';
 import NoteList from '@/components/NoteList/NoteList';
 import SearchBox from '@/components/SearchBox/SearchBox';
 import Pagination from '@/components/Pagination/Pagination';
@@ -13,34 +13,41 @@ import css from '@/components/NotePage/NotePage.module.css';
 
 type NotesClientProps = {
   initialTag: 'All' | NoteTag;
+  initialNotes: NotesResponse;
 };
 
-export default function NotesClient({ initialTag }: NotesClientProps) {
+export default function NotesClient({ initialTag, initialNotes }: NotesClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 800);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentTag, setCurrentTag] = useState(initialTag);
-
-  const perPage = 12;
 
   useEffect(() => {
     setCurrentPage(1);
     setCurrentTag(initialTag);
   }, [initialTag]);
 
-  const { data, isLoading, isError } = useQuery<FetchNotesResponse>({
+  const { data, isLoading, isError } = useQuery<NotesResponse>({
     queryKey: ['notes', debouncedSearchTerm, currentPage, currentTag],
-    queryFn: () =>
-      fetchNotes({
+    queryFn: async () => {
+      const res = await fetchNotes({
         page: currentPage,
-        perPage,
+        perPage: 12,
         search: debouncedSearchTerm,
         tag: currentTag === 'All' ? undefined : currentTag,
-      }),
+      });
+
+      // Преобразуем результат fetchNotes к NotesResponse
+      return {
+        notes: res.data ?? [],
+        totalPages: Math.ceil((res.total ?? 0) / 12) || 1,
+      };
+    },
+    initialData: initialNotes,
   });
 
-  const notes = data?.data ?? [];
-  const totalPages = Math.ceil((data?.total ?? 0) / perPage) || 1;
+  const notes = data?.notes ?? [];
+  const totalPages = data?.totalPages ?? 1;
 
   const handleSearchChange = (newTerm: string) => {
     setSearchTerm(newTerm);
