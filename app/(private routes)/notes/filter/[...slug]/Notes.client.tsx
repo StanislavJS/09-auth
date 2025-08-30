@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from 'use-debounce';
 import type { NoteTag } from '@/types/note';
-import { fetchNotes } from '@/lib/api/clientApi';
+import { fetchNotes, FetchNotesResponse } from '@/lib/api/clientApi';
 import NoteList from '@/components/NoteList/NoteList';
 import SearchBox from '@/components/SearchBox/SearchBox';
 import Pagination from '@/components/Pagination/Pagination';
 import Link from 'next/link';
-import css from '@/components/NotePage/NotePage.module.css';
+import css from '../../../../../components/NotePage/NotePage.module.css';
 
 type NotesClientProps = {
   initialTag: 'All' | NoteTag;
@@ -24,24 +24,24 @@ export default function NotesClient({ initialTag }: NotesClientProps) {
   const perPage = 12;
 
   useEffect(() => {
-    // При зміні тегу скидаємо сторінку
     setCurrentPage(1);
     setCurrentTag(initialTag);
   }, [initialTag]);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery<FetchNotesResponse>({
     queryKey: ['notes', debouncedSearchTerm, currentPage, currentTag],
     queryFn: () =>
-      fetchNotes(
-        currentPage,
-        debouncedSearchTerm,
+      fetchNotes({
+        page: currentPage,
         perPage,
-        currentTag === 'All' ? undefined : currentTag
-      ),
+        search: debouncedSearchTerm,
+        tag: currentTag === 'All' ? undefined : currentTag,
+      }),
+    keepPreviousData: true as const, // исправлено для TS
   });
 
-  const notes = data?.notes ?? [];
-  const totalPages = data?.totalPages ?? 1;
+  const notes = data?.data ?? [];
+  const totalPages = Math.ceil((data?.total ?? 0) / perPage) || 1;
 
   const handleSearchChange = (newTerm: string) => {
     setSearchTerm(newTerm);

@@ -46,7 +46,6 @@ interface UpdateMeRequest {
 }
 
 // ---------------- NOTES ----------------
-
 export const fetchNotes = async (
   params: FetchNotesParams = {}
 ): Promise<FetchNotesResponse> => {
@@ -74,9 +73,7 @@ export const fetchNoteById = async (id: string): Promise<Note> => {
   return res.data;
 };
 
-export const createNote = async (
-  noteData: CreateNotePayload
-): Promise<Note> => {
+export const createNote = async (noteData: CreateNotePayload): Promise<Note> => {
   const res = await api.post<Note>('/notes', noteData);
   return res.data;
 };
@@ -87,7 +84,6 @@ export const deleteNote = async (noteId: string): Promise<Note> => {
 };
 
 // ---------------- AUTH ----------------
-
 export const register = async (data: RegisterRequest): Promise<User> => {
   const res = await api.post<User>('/auth/register', data);
   return res.data;
@@ -113,7 +109,6 @@ export const logout = async (): Promise<void> => {
 };
 
 // ---------------- USER ----------------
-
 export const updateMe = async (data: UpdateMeRequest): Promise<User> => {
   const res = await api.patch<User>('/users/me', data);
   return res.data;

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User } from '../../types/user';
+import { User } from '@/types/user';
 
 type AuthStore = {
   isAuthenticated: boolean;
@@ -9,14 +9,8 @@ type AuthStore = {
 };
 
 export const useAuthStore = create<AuthStore>((set) => ({
-  isAuthenticated: typeof window !== 'undefined' && !!localStorage.getItem('user'),
-  user: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || 'null') : null,
-  setUser: (user: User) => {
-    localStorage.setItem('user', JSON.stringify(user));
-    set(() => ({ user, isAuthenticated: true }));
-  },
-  clearIsAuthenticated: () => {
-    localStorage.removeItem('user');
-    set(() => ({ user: null, isAuthenticated: false }));
-  },
+  isAuthenticated: false,
+  user: null,
+  setUser: (user: User) => set(() => ({ user, isAuthenticated: true })),
+  clearIsAuthenticated: () => set(() => ({ user: null, isAuthenticated: false })),
 }));

@@ -1,48 +1,52 @@
+'use client';
+
 import css from '@/components/ProfilePage/ProfilePage.module.css';
-import { getServerMe } from '@/lib/api/serverApi';
-import { Metadata } from 'next';
+import { useAuthStore } from '@/lib/store/authStore';
+import { logout } from '@/lib/api/clientApi';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import type { User } from '@/types/user';
 
-export const metadata: Metadata = {
-  title: 'User Profile | NoteHub',
-  description:
-    'View and manage your user profile, update personal details and settings.',
-  openGraph: {
-    title: 'User Profile | NoteHub',
-    description:
-      'View and manage your user profile, update personal details and settings.',
-    url: 'https://09-auth-nu-five.vercel.app/profile',
-    images: [
-      {
-        url: 'https://ac.goit.global/fullstack/react/notehub-og-meta.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'NoteHub User Profile',
-      },
-    ],
-    type: 'website',
-  },
-};
+type Props = { user: User | null };
 
-const Profile = async () => {
-  const user = await getServerMe();
+const ProfileClient = ({ user }: Props) => {
+  const clearIsAuthenticated = useAuthStore((state) => state.clearIsAuthenticated);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      clearIsAuthenticated();
+      router.push('/sign-in');
+    } catch (err) {
+      console.error('Logout failed', err);
+    }
+  };
+
+  if (!user) return <div className={css.mainContent}>User not found.</div>;
+
   return (
     <main className={css.mainContent}>
       <div className={css.profileCard}>
         <div className={css.header}>
           <h1 className={css.formTitle}>Profile Page</h1>
-          <Link href="/profile/edit" className={css.editProfileButton}>
-            Edit Profile
-          </Link>
+          <div>
+            <Link href="/profile/edit" className={css.editProfileButton}>
+              Edit Profile
+            </Link>
+            <button onClick={handleLogout} className={css.logoutButton}>
+              Logout
+            </button>
+          </div>
         </div>
         <div className={css.avatarWrapper}>
-         <Image
-          src={user.avatar || '/default-avatar.png'}
-          alt="User Avatar"
-          width={120}
-          height={120}
-          className={css.avatar}
+          <Image
+            src={user.avatar || '/default-avatar.png'}
+            alt="User Avatar"
+            width={120}
+            height={120}
+            className={css.avatar}
           />
         </div>
         <div className={css.profileInfo}>
@@ -54,4 +58,4 @@ const Profile = async () => {
   );
 };
 
-export default Profile;
+export default ProfileClient;

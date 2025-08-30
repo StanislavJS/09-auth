@@ -1,5 +1,4 @@
 'use client';
-
 import { checkSession, getMe } from '@/lib/api/clientApi';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useEffect, useState } from 'react';
@@ -8,9 +7,7 @@ type Props = { children: React.ReactNode };
 
 const AuthProvider = ({ children }: Props) => {
   const setUser = useAuthStore((state) => state.setUser);
-  const clearIsAuthenticated = useAuthStore(
-    (state) => state.clearIsAuthenticated
-  );
+  const clearIsAuthenticated = useAuthStore((state) => state.clearIsAuthenticated);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,8 +15,8 @@ const AuthProvider = ({ children }: Props) => {
 
     const fetchSession = async () => {
       try {
-        const response = await checkSession();
-        if (response) {
+        const session = await checkSession();
+        if (session) {
           const user = await getMe();
           if (isMounted) setUser(user);
         } else {
@@ -33,14 +30,11 @@ const AuthProvider = ({ children }: Props) => {
     };
 
     fetchSession();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [clearIsAuthenticated, setUser]);
+    return () => { isMounted = false; };
+  }, [setUser, clearIsAuthenticated]);
 
   if (loading) return <div>Loading...</div>;
-  return children;
+  return <>{children}</>;
 };
 
 export default AuthProvider;

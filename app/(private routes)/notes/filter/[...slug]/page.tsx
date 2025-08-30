@@ -1,82 +1,49 @@
-// app/notes/filter/[...slug]/page.tsx
-import { fetchNotes } from '@/lib/api/clientApi';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { checkSession } from '@/lib/api/clientApi';
 import NotesClient from './Notes.client';
-import type { NotesResponse, NoteTag } from '@/types/note';
-import {
-  dehydrate,
-  QueryClient,
-  HydrationBoundary,
-} from '@tanstack/react-query';
-import type { Metadata } from 'next';
+import type { NoteTag } from '@/types/note';
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://your-vercel-domain.vercel.app';
+type ProtectedNotesProps = {
+  initialTag: 'All' | NoteTag;
+};
 
-function isNoteTag(value: string | undefined): value is NoteTag {
-  return ['Work', 'Personal', 'Meeting', 'Shopping', 'Todo'].includes(value ?? '');
-}
+export default function ProtectedNotes({ initialTag }: ProtectedNotesProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
 
-interface NotesFilterPageProps {
-  params: Promise<{ slug?: string[] }>;
-  searchParams: Promise<{ page?: string; search?: string }>;
-}
+  useEffect(() => {
+    let isMounted = true;
 
-// 🔹 Хелпер для отримання тегу
-async function getFilterParams(
-  params: Promise<{ slug?: string[] }>
-) {
-  const { slug } = await params;
-  let tag: string | undefined = slug?.[0];
-  if (tag === 'All') tag = undefined;
-  return { tag, slug };
-}
+    const verifySession = async () => {
+      try {
+        const valid = await checkSession();
+        if (isMounted) {
+          if (!valid) {
+            router.push('/sign-in'); // редирект на страницу входа
+          } else {
+            setAuthenticated(true);
+          }
+        }
+      } catch {
+        router.push('/sign-in');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
 
-// ✅ SEO metadata
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug?: string[] }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
-  const filterName = slug?.join(' / ') || 'All';
+    verifySession();
 
-  return {
-    title: `Notes filtered by ${filterName} | NoteHub`,
-    description: `Browse notes filtered by ${filterName} in NoteHub.`,
-    openGraph: {
-      title: `Notes filtered by ${filterName} | NoteHub`,
-      description: `Browse notes filtered by ${filterName} in NoteHub.`,
-      url: `${SITE_URL}/notes/filter/${slug?.join('/') ?? ''}`,
-      images: [
-        {
-          url: 'https://ac.goit.global/fullstack/react/notehub-og-meta.jpg',
-          width: 1200,
-          height: 630,
-          alt: 'NoteHub Filtered Notes OG Image',
-        },
-      ],
-    },
-  };
-}
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
 
-// ✅ Сторінка
-export default async function NotesFilterPage({
-  params,
-}: NotesFilterPageProps) {
-  const { tag } = await getFilterParams(params);
+  if (loading) return <div>Loading...</div>;
+  if (!authenticated) return null;
 
-  const queryClient = new QueryClient();
-
-  // Prefetch тільки для поточного тегу
-  await queryClient.prefetchQuery<NotesResponse>({
-    queryKey: ['notes', 1, '', tag], // сторінка 1 та порожній пошук
-    queryFn: () => fetchNotes(1, '', 12, tag),
-  });
-
-  return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <NotesClient initialTag={isNoteTag(tag) ? tag : 'All'} />
-    </HydrationBoundary>
-  );
+  return <NotesClient initialTag={initialTag} />;
 }
